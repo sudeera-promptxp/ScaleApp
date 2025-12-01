@@ -27,7 +27,7 @@ function getClientIp(ws) {
 wss.on("connection", (ws, req) => {
   ws.type = null;
   ws.scaleId = null;
-  ws.localIP = null;
+  ws.deviceId = null;
   ws.ip = getClientIp(ws);
   ws.lastActivity = Date.now();
 
@@ -38,7 +38,7 @@ wss.on("connection", (ws, req) => {
     try { data = JSON.parse(msg.toString()); }
     catch { return; }
 
-    const { action, scaleId, weight, localIP } = data;
+    const { action, scaleId, weight, deviceId } = data;
 
     // ----------------------
     // REGISTER BRIDGE
@@ -49,7 +49,7 @@ wss.on("connection", (ws, req) => {
 
       ws.type = "bridge";
       ws.scaleId = scaleId;
-      ws.localIP = localIP;
+      ws.deviceId = deviceId;
       ws.lastActivity = Date.now();
 
       let group = groups.get(scaleId);
@@ -63,10 +63,7 @@ wss.on("connection", (ws, req) => {
       // RULE 1: Reject if another PC is using the same scale
       //-----------------------------------------------------------------
       for (const c of group) {
-        if (c.type === "bridge" && c.localIP !== ws.localIP) {
-
-          console.log(`exist local IP : ${c.localIP} New exist local IP : ${ws.localIP}`);
-          
+        if (c.type === "bridge" && c.deviceId !== ws.deviceId) {
           return ws.send(
             JSON.stringify({
               status: `Scale ${scaleId} already in use by another PC`
@@ -82,7 +79,7 @@ wss.on("connection", (ws, req) => {
 
       for (const g of groups.values()) {
         for (const c of g) {
-          if (c.type === "bridge" && c.localIP === ws.localIP) {
+          if (c.type === "bridge" && c.deviceId === ws.deviceId) {
             if (c.readyState !== WebSocket.OPEN) {
               g.delete(c);
               continue;
@@ -111,11 +108,11 @@ wss.on("connection", (ws, req) => {
       // RULE 2B: Same PC, same scale → MERGE
       //-----------------------------------------------------------------
       if (existing) {
-        console.log(`Merging duplicate bridge from PC ${localIP} for scale ${scaleId}`);
+        console.log(`Merging duplicate bridge from PC ${deviceId} for scale ${scaleId}`);
 
         existing.type = "bridge";
         existing.scaleId = scaleId;
-        existing.localIP = localIP;
+        existing.deviceId = deviceId;
         existing.lastActivity = Date.now();
 
         // ensure existing stays in same group
@@ -175,7 +172,7 @@ wss.on("connection", (ws, req) => {
 
       ws.type = "client";
       ws.scaleId = scaleId;
-      ws.localIP = localIP;
+      ws.deviceId = deviceId;
       ws.lastActivity = Date.now();
 
       groups.get(scaleId).add(ws);
