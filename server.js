@@ -54,79 +54,80 @@ wss.on("connection", (ws, req) => {
 
       let group = groups.get(scaleId);
 
-      //-----------------------------------------------------------------
-      // RULE 1: Reject if another PC is using the same scale
-      //-----------------------------------------------------------------
-      for (const c of group) {
-        if (c.type === "bridge" && c.localIP !== ws.localIP) {
+      if (group) {
+        //-----------------------------------------------------------------
+        // RULE 1: Reject if another PC is using the same scale
+        //-----------------------------------------------------------------
+        for (const c of group) {
+          if (c.type === "bridge" && c.localIP !== ws.localIP) {
+            return ws.send(
+              JSON.stringify({
+                status: `Scale ${scaleId} already in use by another PC`
+              })
+            );
+          }
+        }
+
+        //-----------------------------------------------------------------
+        // RULE 2: Find existing connection from same PC (bridge only)
+        //-----------------------------------------------------------------
+        let existing = null;
+
+        for (const g of groups.values()) {
+          for (const c of g) {
+            if (c.type === "bridge" && c.localIP === ws.localIP) {
+              if (c.readyState !== WebSocket.OPEN) {
+                g.delete(c);
+                continue;
+              }
+
+              existing = c;
+              break;
+            }
+          }
+          if (existing) break;
+        }
+
+        //-----------------------------------------------------------------
+        // RULE 2A: Same PC but different scale → REJECT
+        //-----------------------------------------------------------------
+        if (existing && existing.scaleId !== scaleId) {
           return ws.send(
             JSON.stringify({
-              status: `Scale ${scaleId} already in use by another PC`
-            })
+              status: `This PC is already connected with scale ${existing.scaleId}, cannot register ${scaleId}`
+            }),
+            () => ws.close(4004, "Scale mismatch – cannot merge")
+          );
+        }
+
+        //-----------------------------------------------------------------
+        // RULE 2B: Same PC, same scale → MERGE
+        //-----------------------------------------------------------------
+        if (existing) {
+          console.log(`Merging duplicate bridge from PC ${localIP} for scale ${scaleId}`);
+
+          existing.type = "bridge";
+          existing.scaleId = scaleId;
+          existing.localIP = localIP;
+          existing.lastActivity = Date.now();
+
+          // ensure existing stays in same group
+          group.add(existing);
+
+          return ws.send(
+            JSON.stringify({ status: "Merged into existing connection" }),
+            () => ws.close(4003, "Merged")
           );
         }
       }
-
-      //-----------------------------------------------------------------
-      // RULE 2: Find existing connection from same PC (bridge only)
-      //-----------------------------------------------------------------
-      let existing = null;
-
-      for (const g of groups.values()) {
-        for (const c of g) {
-          if (c.type === "bridge" && c.localIP === ws.localIP) {
-            if (c.readyState !== WebSocket.OPEN) {
-              g.delete(c);
-              continue;
-            }
-
-            existing = c;
-            break;
-          }
-        }
-        if (existing) break;
-      }
-
-      //-----------------------------------------------------------------
-      // RULE 2A: Same PC but different scale → REJECT
-      //-----------------------------------------------------------------
-      if (existing && existing.scaleId !== scaleId) {
-        return ws.send(
-          JSON.stringify({
-            status: `This PC is already connected with scale ${existing.scaleId}, cannot register ${scaleId}`
-          }),
-          () => ws.close(4004, "Scale mismatch – cannot merge")
-        );
-      }
-
-      //-----------------------------------------------------------------
-      // RULE 2B: Same PC, same scale → MERGE
-      //-----------------------------------------------------------------
-      if (existing) {
-        console.log(`Merging duplicate bridge from PC ${localIP} for scale ${scaleId}`);
-
-        existing.type = "bridge";
-        existing.scaleId = scaleId;
-        existing.localIP = localIP;
-        existing.lastActivity = Date.now();
-
-        // ensure existing stays in same group
-        group.add(existing);
-
-        return ws.send(
-          JSON.stringify({ status: "Merged into existing connection" }),
-          () => ws.close(4003, "Merged")
-        );
-      }
-
-      //-----------------------------------------------------------------
-      // RULE 3: New connection from this PC
-      //-----------------------------------------------------------------
-      if (!group) {
+      else {
         group = new Set();
         groups.set(scaleId, group);
       }
-
+      
+      //-----------------------------------------------------------------
+      // RULE 3: New connection from this PC
+      //-----------------------------------------------------------------
       group.add(ws);
 
       ws.send(JSON.stringify({ status: `Bridge registered for ${scaleId}` }));
