@@ -89,8 +89,9 @@ wss.on("connection", (ws, req) => {
             break;
           }
         }
-        if (existing) break;
+        if (existing) break; // stop searching if found
       }
+
 
       //-----------------------------------------------------------------
       // RULE 2A: Same PC but different scale → REJECT
@@ -248,7 +249,7 @@ wss.on("connection", (ws, req) => {
         groups.delete(scaleId);
       }
     }
-  }, TIMEOUT_MS);
+  }, 10 * 60 * 1000);
 
   // CLEANUP ON CLOSE
   ws.on("close", () => {
