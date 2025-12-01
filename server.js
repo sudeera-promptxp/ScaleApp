@@ -257,8 +257,8 @@ wss.on("connection", (ws, req) => {
   // CLEANUP ON CLOSE
   ws.on("close", () => {
     if (ws.scaleId && groups.has(ws.scaleId)) {
-      groups.get(ws.scaleId).delete(ws);
-      console.log(`${ws.type} disconnected: ${ws.scaleId}`);
+      //groups.get(ws.scaleId).delete(ws);
+      //console.log(`${ws.type} disconnected: ${ws.scaleId}`);
     }
   });
 });
