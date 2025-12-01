@@ -71,9 +71,15 @@ wss.on("connection", (ws, req) => {
       for (const g of groups.values()) {
         for (const c of g) {
           if (c.type === "bridge" && c.localIP === ws.localIP && c !== ws) {
-            console.log(`Closing duplicate bridge from same PC (${ws.localIP})`);
-            c.close(4000, "Duplicate connection from same PC");
-            g.delete(c);
+            if(c.readyState !== WebSocket.OPEN){
+              c.close(4000, "Duplicate connection from same PC");
+              g.delete(c);
+            }
+            else{
+              return ws.send(JSON.stringify({
+                status: `This pc is already connected with ${scaleId}`
+              }));
+            }
           }
         }
       }
