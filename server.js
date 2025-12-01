@@ -53,10 +53,6 @@ wss.on("connection", (ws, req) => {
       ws.lastActivity = Date.now();
 
       let group = groups.get(scaleId);
-      if (!group) {
-        group = new Set();
-        groups.set(scaleId, group);
-      }
 
       //-----------------------------------------------------------------
       // RULE 1: Reject if another PC is using the same scale
@@ -79,8 +75,6 @@ wss.on("connection", (ws, req) => {
       for (const g of groups.values()) {
         for (const c of g) {
           if (c.type === "bridge" && c.localIP === ws.localIP) {
-            
-            // ✔ FIX: skip dead sockets
             if (c.readyState !== WebSocket.OPEN) {
               g.delete(c);
               continue;
@@ -128,6 +122,11 @@ wss.on("connection", (ws, req) => {
       //-----------------------------------------------------------------
       // RULE 3: New connection from this PC
       //-----------------------------------------------------------------
+      if (!group) {
+        group = new Set();
+        groups.set(scaleId, group);
+      }
+      
       group.add(ws);
 
       ws.send(JSON.stringify({ status: `Bridge registered for ${scaleId}` }));
