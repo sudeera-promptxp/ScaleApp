@@ -66,8 +66,7 @@ wss.on("connection", (ws, req) => {
           return ws.send(
             JSON.stringify({
               status: `Scale ${scaleId} already in use by another PC`
-            }),
-            () => ws.close(4004, "Scale already in use by another PC")
+            })
           );
         }
       }
@@ -159,8 +158,7 @@ wss.on("connection", (ws, req) => {
       }
 
       groups.delete(scaleId);
-      ws.send(JSON.stringify({ status: `Bridge disconnected ${scaleId}` }));
-      return;
+      return ws.send(JSON.stringify({ status: `Bridge disconnected ${scaleId}`}));
     }
 
     // ----------------------
@@ -204,7 +202,6 @@ wss.on("connection", (ws, req) => {
         }
       }
 
-      //groups.delete(scaleId);
       ws.send(JSON.stringify({ status: `Client disconnected ${scaleId}` }));
       return;
     }
@@ -258,7 +255,6 @@ wss.on("connection", (ws, req) => {
   ws.on("close", () => {
     if (ws.scaleId && groups.has(ws.scaleId)) {
       //groups.get(ws.scaleId).delete(ws);
-      //console.log(`${ws.type} disconnected: ${ws.scaleId}`);
     }
   });
 });
