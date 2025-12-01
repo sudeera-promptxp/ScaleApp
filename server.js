@@ -64,7 +64,8 @@ wss.on("connection", (ws, req) => {
         if (c.type === "bridge" && c.localIP !== ws.localIP) {
           return ws.send(JSON.stringify({
             status: `Scale ${scaleId} already in use by another PC`
-          }));
+          }),
+          () => ws.close(4004, "Scale already in use by another PC"));
         }
       }
 
