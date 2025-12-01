@@ -60,6 +60,7 @@ wss.on("connection", (ws, req) => {
         groups.set(scaleId, group);
       }
 
+      // rule 1: another PC is using this scale
       for (const c of group) {
         if (c.type === "bridge" && c.localIP !== ws.localIP) {
           return ws.send(JSON.stringify({
@@ -68,21 +69,28 @@ wss.on("connection", (ws, req) => {
         }
       }
 
+      // rule 2: same PC connecting twice
       for (const g of groups.values()) {
         for (const c of g) {
           if (c.type === "bridge" && c.localIP === ws.localIP && c !== ws) {
-            if(c.readyState !== WebSocket.OPEN){
-              c.close(4000, "Duplicate connection from same PC");
+
+            if (c.readyState !== WebSocket.OPEN) {
+              // dead socket cleanup
               g.delete(c);
+              continue;
             }
-            else{
-              return ws.send(JSON.stringify({
-                status: `This pc is already connected with ${scaleId}`
-              }));
-            }
+
+            // duplicate alive connection → reject new one
+            return ws.send(
+              JSON.stringify({
+                status: `This PC is already connected with ${scaleId}`
+              }),
+              () => ws.close(4000, "Duplicate connection from same PC")
+            );
           }
         }
       }
+
 
       group.add(ws);
 
