@@ -25,12 +25,6 @@ wss.on("connection", (ws, req) => {
 
   console.log(`WS connected from ${ws.ip}`);
 
-  ws.on("close", () => {
-    if (ws.scaleId && groups.has(ws.scaleId)) {
-      groups.get(ws.scaleId).delete(ws);
-    }
-  });
-
   ws.on("message", (msg) => {
     let data;
     try { data = JSON.parse(msg.toString()); }
@@ -127,7 +121,7 @@ wss.on("connection", (ws, req) => {
       group.add(ws);
 
       ws.send(JSON.stringify({ status: `Bridge registered for ${scaleId}` }));
-      console.log(`Bridge registered for ${scaleId}`);
+        console.log(`Bridge registered for ${scaleId}`);
       return;
     }
 
@@ -212,8 +206,12 @@ wss.on("connection", (ws, req) => {
     }
   });
   
+  ws.on("close", () => {
+    if (ws.scaleId && groups.has(ws.scaleId)) {
+      groups.get(ws.scaleId).delete(ws);
+    }
+  });
   // Activity Timeout Cleanup (1 hour)
-
   const TIMEOUT_MS = 60 * 60 * 1000; 
 
   setInterval(() => {
