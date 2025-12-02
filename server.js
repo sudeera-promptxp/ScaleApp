@@ -44,11 +44,6 @@ wss.on("connection", (ws, req) => {
 
       let group = groups.get(scaleId);
 
-      if (!group) {
-        group = new Set();
-        groups.set(scaleId, group);
-      }
-
       //-----------------------------------------------------------------
       // RULE 1: Reject if another PC is using the same scale
       //-----------------------------------------------------------------
@@ -118,6 +113,10 @@ wss.on("connection", (ws, req) => {
       //-----------------------------------------------------------------
       // RULE 3: New connection from this PC
       //-----------------------------------------------------------------
+      if (!group) {
+        group = new Set();
+        groups.set(scaleId, group);
+      }
       group.add(ws);
 
       ws.send(JSON.stringify({ status: `Bridge registered for ${scaleId}` }));
