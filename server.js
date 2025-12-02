@@ -10,12 +10,10 @@ const lastWeight = new Map();
 const server = http.createServer();
 const wss = new WebSocket.Server({ server });
 
-
 // Get client IP
 function getClientIp(ws) {
   return ws._socket.remoteAddress;
 }
-
 
 // MAIN CONNECTION HANDLER
 wss.on("connection", (ws, req) => {
@@ -26,6 +24,12 @@ wss.on("connection", (ws, req) => {
   ws.lastActivity = Date.now();
 
   console.log(`WS connected from ${ws.ip}`);
+
+  ws.on("close", () => {
+    if (ws.scaleId && groups.has(ws.scaleId)) {
+      groups.get(ws.scaleId).delete(ws);
+    }
+  });
 
   ws.on("message", (msg) => {
     let data;
@@ -127,9 +131,6 @@ wss.on("connection", (ws, req) => {
       return;
     }
 
-
-
-
     // Disconnect bridge
     if (action === "disconnect-bridge") {
       if (!scaleId)
@@ -210,13 +211,6 @@ wss.on("connection", (ws, req) => {
       return;
     }
   });
-
-  ws.on("close", () => {
-    if (ws.scaleId && groups.has(ws.scaleId)) {
-      groups.get(ws.scaleId).delete(ws);
-    }
-  });
-
   
   // Activity Timeout Cleanup (1 hour)
 
