@@ -2,28 +2,22 @@ const fs = require("fs");
 const http = require("http");
 const WebSocket = require("ws");
 
-// -----------------
-// Data Structures
-// -----------------
-const groups = new Map();        // scaleId → Set<ws>
-const lastWeight = new Map();    // scaleId → lastWeightValue
+const groups = new Map();
+const lastWeight = new Map();
 
-// -----------------
-// Create WS server
-// -----------------
+
+// Create servers
 const server = http.createServer();
 const wss = new WebSocket.Server({ server });
 
-// -----------------
-// Helper: Get client IP
-// -----------------
+
+// Get client IP
 function getClientIp(ws) {
   return ws._socket.remoteAddress;
 }
 
-// -----------------
+
 // MAIN CONNECTION HANDLER
-// -----------------
 wss.on("connection", (ws, req) => {
   ws.type = null;
   ws.scaleId = null;
@@ -40,9 +34,7 @@ wss.on("connection", (ws, req) => {
 
     const { action, scaleId, weight, deviceId } = data;
 
-    // ----------------------
-    // REGISTER BRIDGE
-    // ----------------------
+    // Register bridge
     if (action === "register-bridge") {
       if (!scaleId)
         return ws.send(JSON.stringify({ error: "Missing Scale ID" }));
@@ -138,9 +130,7 @@ wss.on("connection", (ws, req) => {
 
 
 
-    // ----------------------
-    // DISCONNECT BRIDGE
-    // ----------------------
+    // Disconnect bridge
     if (action === "disconnect-bridge") {
       if (!scaleId)
         return ws.send(JSON.stringify({ error: "Missing Scale ID" }));
@@ -161,9 +151,7 @@ wss.on("connection", (ws, req) => {
       return ws.send(JSON.stringify({ status: `Bridge disconnected ${scaleId}`}));
     }
 
-    // ----------------------
-    // REGISTER CLIENT
-    // ----------------------
+    // Regiter client
     if (action === "register-client") {
       if (!scaleId)
         return ws.send(JSON.stringify({ error: "Missing Scale ID" }));
@@ -183,9 +171,7 @@ wss.on("connection", (ws, req) => {
       return;
     }
 
-    // ----------------------
-    // DISCONNECT CLIENT
-    // ----------------------
+    // Disconnect client
     if (action === "disconnect-client") {
       if (!scaleId)
         return ws.send(JSON.stringify({ error: "Missing Scale ID" }));
@@ -206,9 +192,7 @@ wss.on("connection", (ws, req) => {
       return;
     }
 
-    // ----------------------
-    // WEIGHT
-    // ----------------------
+    // Weight
     if (action === "weight") {
       if (weight === undefined) return;
 
@@ -227,10 +211,16 @@ wss.on("connection", (ws, req) => {
     }
   });
 
-  // -----------------
+  ws.on("close", () => {
+    if (ws.scaleId && groups.has(ws.scaleId)) {
+      groups.get(ws.scaleId).delete(ws);
+    }
+  });
+
+  
   // Activity Timeout Cleanup (1 hour)
-  // -----------------
-  const TIMEOUT_MS = 60 * 60 * 1000; // 1 hour
+
+  const TIMEOUT_MS = 60 * 60 * 1000; 
 
   setInterval(() => {
     for (const [scaleId, group] of groups) {
@@ -250,18 +240,9 @@ wss.on("connection", (ws, req) => {
       }
     }
   }, 10 * 60 * 1000);
-
-  // CLEANUP ON CLOSE
-  ws.on("close", () => {
-    if (ws.scaleId && groups.has(ws.scaleId)) {
-      groups.get(ws.scaleId).delete(ws);
-    }
-  });
 });
 
-// -----------------
-// Start WS server
-// -----------------
+// Start server
 server.listen(8080, () => {
   console.log("WS server running at ws://localhost:8080");
 });
