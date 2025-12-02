@@ -194,8 +194,8 @@ wss.on("connection", (ws, req) => {
     if (action === "weight") {
       if (weight === undefined) return;
 
-      if (lastWeight.get(scaleId) === weight) return;
-      lastWeight.set(scaleId, weight);
+      //if (lastWeight.get(scaleId) === weight) return;
+      //lastWeight.set(scaleId, weight);
 
       const group = groups.get(scaleId);
       if (!group) return;
